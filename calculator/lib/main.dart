@@ -33,29 +33,6 @@ class _CalculatorState extends State<Calculator> {
   List<int> numeros = [];
   List<int> lixo = [];
 
-  void _onButtonPressed(String value) {
-    setState(() {
-      if (value == '+') {
-        if (resultado.isNotEmpty) {
-          numeros.add(int.parse(resultado));
-          resultado = '';
-        }
-      } else if (value == '=') {
-        if (resultado.isNotEmpty) {
-          numeros.add(int.parse(resultado));
-        }
-        int soma = numeros.fold(0, (a, b) => a + b);
-        resultado = soma.toString();
-        numeros.clear();
-      } else if(value == 'C'){
-          lixo.add(int.parse(resultado));
-          lixo.clear;
-          resultado = '';
-        }
-       else {
-        resultado += value;
-      }
-    });
   }
 
   @override
