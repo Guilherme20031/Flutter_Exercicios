@@ -1,84 +1,124 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '/components/list.dart';
 import '/components/model.dart';
+import '/pages/details.dart';
 import '/providers/movie_catalog.dart';
 import '/providers/theme_mode.dart';
+import '/providers/favourite_movies.dart';
 
-class MovieCatalogPage extends ConsumerWidget {
+class MovieCatalogPage extends ConsumerStatefulWidget {
   const MovieCatalogPage({super.key});
 
-  static const double _bottomPadding = 16;
-  static const double _runSpacing = 15;
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Dispara o fetch após o primeiro frame (equivale ao initState + ref.read(...).fetchAllByCategory())
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(MovieCatalogNotifier.provider.notifier).fetchAllByCategory();
-    });
+  ConsumerState<MovieCatalogPage> createState() => _MovieCatalogPageState();
+}
 
+class _MovieCatalogPageState extends ConsumerState<MovieCatalogPage> {
+  @override
+  void initState() {
+    ref.read(MovieCatalogNotifier.provider.notifier).fetchAllByCategory();
+    super.initState();
+  }
+
+  static const double _drawerThumbRadius = 20;
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      drawer: _buildDrawer(context),
-      floatingActionButton: _buildFab(ref),
-      appBar: AppBar(title: const Text('Movie Catalog')),
-      body: _buildBody(ref),
-    );
-  }
+      drawer: Drawer(
+        child: Consumer(
+          builder: (context, ref, _) {
+            final favourites = ref.watch(favouriteMoviesProvider);
 
-  Drawer _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: ListView(
-        children: [
-          ListTile(
-            title: const Text('Favourites'),
-            onTap: () {
-              // Mantém o mesmo placeholder (sem navegação no original)
-              Navigator.pop(context);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFab(WidgetRef ref) {
-    return FloatingActionButton(
-      onPressed: () {
-        ref.read(themeModeProvider.notifier).toggleTheme();
-      },
-      child: const Icon(Icons.abc),
-    );
-  }
-
-  // Corpo que observa o provider e rende conforme estado (data/error/loading)
-  Widget _buildBody(WidgetRef ref) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final asyncCatalog = ref.watch(MovieCatalogNotifier.provider);
-
-        return asyncCatalog.when(
-          data: (data) => _buildCatalog(data),
-          error: (error, stackTrace) => Text(error.toString()),
-          loading: () => const Center(child: CircularProgressIndicator()),
-        );
-      },
-    );
-  }
-
-  // Mantém a mesma estrutura de UI: Scroll + Wrap de MovieList por categoria
-  Widget _buildCatalog(Map<String, List<Movie>> data) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: _bottomPadding),
-        child: Wrap(
-          runSpacing: _runSpacing,
-          children: data.entries.map((entry) {
-            final title = entry.key;
-            final movies = entry.value;
-            return MovieList(title: title, movies: movies);
-          }).toList(),
+            return ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                const DrawerHeader(
+                  decoration: BoxDecoration(color: Colors.blueGrey),
+                  child: Text(
+                    'Favoutires', // mantém tua grafia original
+                    style: TextStyle(color: Colors.white, fontSize: 20),
+                  ),
+                ),
+                if (favourites.isEmpty)
+                  const ListTile(
+                    leading: Icon(Icons.info_outline),
+                    title: Text('Nenhum favorito ainda'),
+                  )
+                else
+                  ...favourites.map((movie) {
+                    return ListTile(
+                      leading: CircleAvatar(
+                        radius: _drawerThumbRadius,
+                        backgroundImage: movie.coverUrl != null
+                            ? NetworkImage(movie.coverUrl!)
+                            : null,
+                        child: movie.coverUrl == null
+                            ? const Icon(Icons.movie)
+                            : null,
+                      ),
+                      title: Text(movie.title),
+                      subtitle: Text(
+                        movie.description ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () {
+                        // Fecha a Drawer e navega para detalhes (opcional)
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MovieDetailsPage(movie: movie),
+                          ),
+                        );
+                      },
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () {
+                          final current =
+                              ref.read(favouriteMoviesProvider.notifier).state;
+                          ref.read(favouriteMoviesProvider.notifier).state = [
+                            ...current.where((m) => m.id != movie.id),
+                          ];
+                        },
+                      ),
+                    );
+                  }),
+              ],
+            );
+          },
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          ref.read(themeModeProvider.notifier).toggleTheme();
+        },
+        child: const Icon(Icons.abc),
+      ),
+      appBar: AppBar(title: const Text('Movie Catalog')),
+      body: Consumer(
+        builder: (context, ref, _) {
+          return ref.watch(MovieCatalogNotifier.provider).when(
+                data: (data) {
+                  return SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Wrap(
+                        runSpacing: 15,
+                        children: data.keys
+                            .map((key) => MovieList(title: key, movies: data[key]!))
+                            .toList(),
+                      ),
+                    ),
+                  );
+                },
+                error: (error, _) => Text(error.toString()),
+                loading: () => const Center(child: CircularProgressIndicator()),
+              );
+        },
       ),
     );
   }

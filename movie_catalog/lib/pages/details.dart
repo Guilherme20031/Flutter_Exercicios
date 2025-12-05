@@ -16,110 +16,94 @@ class MovieDetailsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final favourites = ref.watch(favouriteMoviesProvider);
+    final isFav = favourites.any((m) => m.id == movie.id);
+
     return Scaffold(
       appBar: AppBar(),
-      floatingActionButton: _buildFavFab(ref),
+      // FAB dentro dos detalhes: adiciona/remove favoritos
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          final current = ref.read(favouriteMoviesProvider.notifier).state;
+          final exists = current.any((m) => m.id == movie.id);
+
+          ref.read(favouriteMoviesProvider.notifier).state = exists
+              ? [
+                  ...current.where((m) => m.id != movie.id),
+                ]
+              : [
+                  ...current,
+                  movie,
+                ];
+
+          // Feedback rápido
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                exists ? 'Removido dos favoritos' : 'Adicionado aos favoritos',
+              ),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        },
+        child: Icon(isFav ? Icons.favorite : Icons.favorite_border),
+      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildCoverImage(),
+            SizedBox(
+              height: _coverHeight,
+              width: double.infinity,
+              child: Image.network(
+                movie.coverUrl ?? '',
+                fit: BoxFit.cover,
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.all(_pagePadding),
               child: Wrap(
                 runSpacing: _gapMedium,
                 children: [
-                  _buildTitleSection(),
-                  _buildSummaryRow(),
-                  _buildDescription(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(movie.title),
+                      Text(movie.subititle ?? ''),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Summary'),
+                      Row(
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(Icons.favorite),
+                              SizedBox(width: _gapSmall),
+                              Text('100'),
+                            ],
+                          ),
+                          const SizedBox(width: _gapMedium),
+                          Row(
+                            children: const [
+                              Icon(Icons.visibility),
+                              SizedBox(width: _gapSmall),
+                              Text('100'),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Text(movie.description ?? ''),
                 ],
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  // ---------------------------
-  // Widgets (mesmo conteúdo)
-  // ---------------------------
-
-  Widget _buildCoverImage() {
-    return SizedBox(
-      height: _coverHeight,
-      width: double.infinity,
-      child: Image.network(
-        movie.coverUrl ?? '',
-        fit: BoxFit.cover,
-      ),
-    );
-  }
-
-  Widget _buildTitleSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(movie.title),
-        Text(movie.subititle ?? ''),
-      ],
-    );
-  }
-
-  Widget _buildSummaryRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text('Summary'),
-        Row(
-          children: [
-            Row(
-              children: const [
-                Icon(Icons.favorite),
-                SizedBox(width: _gapSmall),
-                Text('100'),
-              ],
-            ),
-            const SizedBox(width: _gapMedium),
-            Row(
-              children: const [
-                Icon(Icons.visibility),
-                SizedBox(width: _gapSmall),
-                Text('100'),
-              ],
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDescription() {
-    return Text(movie.description ?? '');
-  }
-
-  // ---------------------------
-  // Ação do FAB (mesma lógica)
-  // ---------------------------
-
-  Widget _buildFavFab(WidgetRef ref) {
-    return FloatingActionButton(
-      onPressed: () {
-        final movies = ref.read(favouriteMoviesProvider.notifier).state;
-
-        // Mantém exatamente o mesmo toggle de favoritos
-        if (movies.contains(movie)) {
-          ref.read(favouriteMoviesProvider.notifier).state = [
-            ...movies.where((element) => element.id != movie.id),
-          ];
-        } else {
-          ref.read(favouriteMoviesProvider.notifier).state = [
-            ...movies,
-            movie,
-          ];
-        }
-      },
-      child: const Icon(Icons.favorite),
     );
   }
 }

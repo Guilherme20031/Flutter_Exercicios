@@ -8,13 +8,20 @@ import '/providers/favourite_movies.dart';
 class FavouriteMoviesPage extends StatelessWidget {
   const FavouriteMoviesPage({super.key});
 
-  static const double _thumbSize = 56; // tamanho do avatar/thumbnail
+  static const double _thumbSize = 56;
   static const int _subtitleMaxLines = 1;
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Favourites')),
+      appBar: AppBar(title: const Text('Detalhes')),
+
+      floatingActionButton: FloatingActionButton.small(
+        onPressed: () {
+        },
+        child: const Icon(Icons.favorite),
+      ),
+
       body: Consumer(
         builder: (context, ref, _) {
           final movies = ref.watch(favouriteMoviesProvider);
@@ -34,18 +41,10 @@ class FavouriteMoviesPage extends StatelessWidget {
                 ),
               );
             },
-            
           );
         },
-        child:Positioned(
-          right: 0,
-          top: 0,
-          child: FloatingActionButton.small(
-            onPressed:() {}
-        ),
-        ),
-        ),
-      );
+      ),
+    );
   }
 
   Widget _buildLeadingThumb(Movie movie) {
